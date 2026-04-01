@@ -63,15 +63,8 @@ readonly BUILD_DATE="$(date -u +%Y%m%d)"
 : "${CINDER_DEFAULT_PRESET:="survival"}"
 : "${CINDER_DEFAULT_PASSWORD:="cinderpi"}"  # Changed on first boot
 
-# Image name components
-IMAGE_NAME="cinder-os-${CINDER_OS_VERSION}-${BUILD_DATE}"
-IMAGE_FILE="${OUTPUT_DIR}/${IMAGE_NAME}.img"
-ROOTFS_DIR="${BUILD_WORK_DIR}/rootfs"
-BOOTFS_DIR="${BUILD_WORK_DIR}/bootfs"
-
 # Partition sizes
 BOOT_SIZE_MB=256
-ROOT_SIZE_MB=$(( (IMAGE_SIZE_GB * 1024) - BOOT_SIZE_MB - 4 ))  # 4MB alignment buffer
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 
@@ -89,6 +82,13 @@ while [[ $# -gt 0 ]]; do
         *) echo "[build] Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
+
+# Derived paths must be resolved after argument parsing.
+IMAGE_NAME="cinder-os-${CINDER_OS_VERSION}-${BUILD_DATE}"
+IMAGE_FILE="${OUTPUT_DIR}/${IMAGE_NAME}.img"
+ROOTFS_DIR="${BUILD_WORK_DIR}/rootfs"
+BOOTFS_DIR="${BUILD_WORK_DIR}/bootfs"
+ROOT_SIZE_MB=$(( (IMAGE_SIZE_GB * 1024) - BOOT_SIZE_MB - 4 ))  # 4MB alignment buffer
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
@@ -239,6 +239,8 @@ log "Debootstrap complete."
 step "Step 6: Configuring base system..."
 
 # Mount essential pseudo-filesystems for chroot operations
+mkdir -p "${ROOTFS_DIR}/dev" "${ROOTFS_DIR}/proc" "${ROOTFS_DIR}/sys"
+
 mount_and_track_bind() {
     local source="$1"
     local target="$2"
@@ -266,20 +268,6 @@ cat > "${ROOTFS_DIR}/etc/hosts" <<-EOF
 	127.0.1.1   cinder-node
 	::1         localhost ip6-localhost ip6-loopback
 	EOF
-
-# Locale
-chroot "${ROOTFS_DIR}" bash -c "
-    echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
-    locale-gen
-    update-locale LANG=en_US.UTF-8
-" >> "${BUILD_LOG}" 2>&1
-
-# Timezone (UTC for server deployments)
-chroot "${ROOTFS_DIR}" bash -c "
-    ln -sf /usr/share/zoneinfo/UTC /etc/localtime
-    echo 'UTC' > /etc/timezone
-    dpkg-reconfigure -f noninteractive tzdata
-" >> "${BUILD_LOG}" 2>&1
 
 # fstab
 BOOT_UUID="$(blkid -s UUID -o value "${BOOT_PART}")"
@@ -328,6 +316,25 @@ chroot "${ROOTFS_DIR}" bash -c "
 " >> "${BUILD_LOG}" 2>&1
 
 log "Package installation complete."
+
+step "Step 7b: Configuring locale and timezone..."
+
+chroot "${ROOTFS_DIR}" bash -c "
+    if ! command -v locale-gen >/dev/null 2>&1; then
+        echo 'locale-gen is unavailable; ensure locales package is installed' >&2
+        exit 1
+    fi
+
+    echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
+    locale-gen
+    update-locale LANG=en_US.UTF-8
+
+    ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+    echo 'UTC' > /etc/timezone
+    dpkg-reconfigure -f noninteractive tzdata
+" >> "${BUILD_LOG}" 2>&1
+
+log "Locale and timezone configured."
 
 # ── Step 8: Install Cinder files ──────────────────────────────────────────────
 
