@@ -218,14 +218,18 @@ jobs:
       - name: Generate checksums
         run: |
           cd build/libs
-          sha256sum cinder-*.jar > SHA256SUMS
-          cat SHA256SUMS
+          sha256sum cinder-*.jar > JAR-SHA256SUMS
+          cat JAR-SHA256SUMS
 
       - name: Download OS image artifacts
         uses: actions/download-artifact@v4
         with:
           name: cinder-os-images-${{ needs.build.outputs.version }}
           path: dist-os
+
+      - name: Normalize release checksum filenames
+        run: |
+          cp dist-os/SHA256SUMS dist-os/OS-SHA256SUMS
 
       - name: Tag and release
         env:
@@ -237,25 +241,30 @@ jobs:
 
           TAG="v${VERSION}"
 
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists — skipping release."
-            exit 0
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag "$TAG"
+            git push origin "$TAG"
+          else
+            echo "Tag $TAG already exists — continuing to release upload."
           fi
 
-          git tag "$TAG"
-          git push origin "$TAG"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "Cinder ${VERSION}" \
+              --notes "Build from commit \`$(git rev-parse --short HEAD)\` on \`main\`." \
+              --latest
+          fi
 
           ASSETS=(
             "build/libs/cinder-${VERSION}-all.jar"
-            "build/libs/SHA256SUMS"
+            "build/libs/JAR-SHA256SUMS"
+            "dist-os/OS-SHA256SUMS"
           )
 
           while IFS= read -r file; do
             ASSETS+=("$file")
-          done < <(find dist-os -maxdepth 1 -type f | sort)
+          done < <(find dist-os -maxdepth 1 -type f ! -name 'SHA256SUMS' ! -name 'OS-SHA256SUMS' | sort)
 
-          gh release create "$TAG" \
+          gh release upload "$TAG" \
             "${ASSETS[@]}" \
-            --title "Cinder ${VERSION}" \
-            --notes "Build from commit \`$(git rev-parse --short HEAD)\` on \`main\`." \
-            --latest
+            --clobber
