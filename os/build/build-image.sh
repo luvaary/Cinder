@@ -440,53 +440,53 @@ cp "${CINDER_REPO_ROOT}/os/services/cinder.service" \
     "${ROOTFS_DIR}/etc/systemd/system/cinder.service"
 
 if [[ "${CINDER_OS_PROFILE}" == "desktop" ]]; then
-    step "Step 8b: Configuring desktop import tooling..."
+        step "Step 8b: Configuring desktop import tooling..."
 
-    mkdir -p "${ROOTFS_DIR}/usr/local/bin" "${ROOTFS_DIR}/usr/share/applications"
+        mkdir -p "${ROOTFS_DIR}/usr/local/bin" "${ROOTFS_DIR}/usr/share/applications"
 
-    cat > "${ROOTFS_DIR}/usr/local/bin/cinder-online-import" <<-'EOF'
-    #!/usr/bin/env bash
-    exec /opt/cinder/scripts/cinder-online-import.sh "$@"
-    EOF
+        cat > "${ROOTFS_DIR}/usr/local/bin/cinder-online-import" <<'EOF'
+#!/usr/bin/env bash
+exec /opt/cinder/scripts/cinder-online-import.sh "$@"
+EOF
 
-    cat > "${ROOTFS_DIR}/usr/local/bin/cinder-usb-import" <<-'EOF'
-    #!/usr/bin/env bash
-    exec /opt/cinder/scripts/usb-import.sh "$@"
-    EOF
+        cat > "${ROOTFS_DIR}/usr/local/bin/cinder-usb-import" <<'EOF'
+#!/usr/bin/env bash
+exec /opt/cinder/scripts/usb-import.sh "$@"
+EOF
 
-    chmod 755 \
-      "${ROOTFS_DIR}/usr/local/bin/cinder-online-import" \
-      "${ROOTFS_DIR}/usr/local/bin/cinder-usb-import"
+        chmod 755 \
+            "${ROOTFS_DIR}/usr/local/bin/cinder-online-import" \
+            "${ROOTFS_DIR}/usr/local/bin/cinder-usb-import"
 
-    cat > "${ROOTFS_DIR}/usr/share/applications/cinder-online-import.desktop" <<-'EOF'
-    [Desktop Entry]
-    Version=1.0
-    Type=Application
-    Name=Cinder Online Import
-    Comment=Download mods, plugins, or packs from a URL into Cinder directories
-    Exec=/opt/cinder/scripts/cinder-online-import.sh --interactive
-    Icon=system-software-install
-    Terminal=false
-    Categories=Game;Network;Utility;
-    EOF
+        cat > "${ROOTFS_DIR}/usr/share/applications/cinder-online-import.desktop" <<'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Cinder Online Import
+Comment=Download mods, plugins, or packs from a URL into Cinder directories
+Exec=/opt/cinder/scripts/cinder-online-import.sh --interactive
+Icon=system-software-install
+Terminal=false
+Categories=Game;Network;Utility;
+EOF
 
-    cat > "${ROOTFS_DIR}/usr/share/applications/cinder-usb-import.desktop" <<-'EOF'
-    [Desktop Entry]
-    Version=1.0
-    Type=Application
-    Name=Cinder USB Import
-    Comment=Import mods, plugins, and packs from a USB drive
-    Exec=x-terminal-emulator -e /bin/bash -lc 'sudo /opt/cinder/scripts/usb-import.sh'
-    Icon=drive-removable-media
-    Terminal=false
-    Categories=Game;Utility;
-    EOF
+        cat > "${ROOTFS_DIR}/usr/share/applications/cinder-usb-import.desktop" <<'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Cinder USB Import
+Comment=Import mods, plugins, and packs from a USB drive
+Exec=x-terminal-emulator -e /bin/bash -lc 'sudo /opt/cinder/scripts/usb-import.sh'
+Icon=drive-removable-media
+Terminal=false
+Categories=Game;Utility;
+EOF
 
-    chmod 644 \
-      "${ROOTFS_DIR}/usr/share/applications/cinder-online-import.desktop" \
-      "${ROOTFS_DIR}/usr/share/applications/cinder-usb-import.desktop"
+        chmod 644 \
+            "${ROOTFS_DIR}/usr/share/applications/cinder-online-import.desktop" \
+            "${ROOTFS_DIR}/usr/share/applications/cinder-usb-import.desktop"
 
-    log "Desktop import tooling configured."
+        log "Desktop import tooling configured."
 fi
 
 # ── Step 9: Create cinder user ────────────────────────────────────────────────
