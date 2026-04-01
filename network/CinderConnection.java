@@ -553,7 +553,7 @@ public final class CinderConnection {
     // VarInt encode/decode
     // -------------------------------------------------------------------------
 
-    private static final class VarIntResult {
+    static final class VarIntResult {
         final boolean valid;
         final int value;
         final int bytesConsumed;
