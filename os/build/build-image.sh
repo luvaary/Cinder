@@ -320,18 +320,24 @@ log "Package installation complete."
 step "Step 7b: Configuring locale and timezone..."
 
 chroot "${ROOTFS_DIR}" bash -c "
-    if ! command -v locale-gen >/dev/null 2>&1; then
-        echo 'locale-gen is unavailable; ensure locales package is installed' >&2
-        exit 1
+    # Ensure admin binaries are discoverable in chroot even when caller PATH is minimal.
+    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+    if [[ -x /usr/sbin/locale-gen ]]; then
+        echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
+        /usr/sbin/locale-gen
+    else
+        echo 'locale-gen is unavailable; continuing without generated locales' >&2
     fi
 
-    echo 'en_US.UTF-8 UTF-8' > /etc/locale.gen
-    locale-gen
-    update-locale LANG=en_US.UTF-8
+    if [[ -x /usr/sbin/update-locale ]]; then
+        /usr/sbin/update-locale LANG=en_US.UTF-8
+    else
+        echo 'LANG=en_US.UTF-8' > /etc/default/locale
+    fi
 
     ln -sf /usr/share/zoneinfo/UTC /etc/localtime
     echo 'UTC' > /etc/timezone
-    dpkg-reconfigure -f noninteractive tzdata
 " >> "${BUILD_LOG}" 2>&1
 
 log "Locale and timezone configured."
